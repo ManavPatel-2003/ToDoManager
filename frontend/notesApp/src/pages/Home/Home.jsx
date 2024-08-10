@@ -4,70 +4,120 @@ import NoteCard from '../../components/Cards/NoteCard'
 import { MdAdd, MdOnDeviceTraining } from 'react-icons/md'
 import EditNotes from '../../components/Cards/EditNotes'
 import Modal from "react-modal"
+import axios from "axios"
+import { useEffect } from 'react'
+import axiosInstance from '../../utils/axiosInstance'
+import { useNavigate } from 'react-router-dom'
 
 function Home() {
 
+  const navigate = useNavigate()
   const [openEditNote, setOpenEditNote] = useState(
     {
       isShown: false, 
-      types: "add", 
+      type: "add", 
       data: null,
     }
   )
+
+  const [userInfo, setUserInfo] = useState(null)
+
+  const getUserInfo = async() => {
+    try{
+      const response = await axiosInstance.post('/get-user');
+
+      // console.log(response.data.user)
+      if(response.data && response.data.user){
+        setUserInfo(response.data.user)
+      }
+    }
+    catch(error){
+      if(error.response.status === 401){
+        localStorage.clear();
+        navigate('/login')
+      }
+    }
+  }
+  
+  const[notesData, setNotesData] = useState()
+
+  const getAllNotes = async() => {
+    try{
+      const response = await axiosInstance.post('/all-notes')
+      // console.log(response.data)
+      if(response.data && response.data.notes){
+        // console.log(response.data)
+        setNotesData(response.data.notes)
+      }
+    }
+    catch(error){
+      console.log("An unexpected error occurred. Please try again!")
+    }
+  }
+
+  const handleEdit = (noteData) => {
+    // console.log("Hello", noteData)
+    setOpenEditNote({
+      isShown: true, 
+      data: noteData,
+      type: "edit"
+    })
+  }
+
+  const handleDelete = async(noteData) => {
+    try{
+      await axiosInstance.post('/delete-note/'+noteData._id).then( () => {
+        getAllNotes();
+      })
+    }
+    catch(err){
+      console.log(err)
+    }
+  }
+
+  const handlePin = async(noteData) => {
+    try{
+      // console.log(noteData.isPinned)
+      await axiosInstance.post('/update-pinned-note/'+noteData._id, {isPinned: noteData.isPinned}).then( (resp) => {
+        // console.log(resp.data.message)
+        // console.log(noteData.isPinned)
+        getAllNotes()
+      })
+    }
+    catch(err){
+      console.log(err)
+    }
+  }
+  const [data, setData] = useState()
+  useEffect( () => {
+    getAllNotes();
+    getUserInfo();
+    
+  }, [])
   return (
     <div>
-      <Navbar />
+      
+      <Navbar/>
       <div className='container mx-auto my-auto'>
         <div className='grid grid-cols-3 gap-4 mt-8'>
-          <NoteCard 
-            title="Meeting abc" 
-            date="12/12/1212" 
-            content="Important meeting" 
-            onEdit={()=>{}}
-            onDelete={()=>{}}
+        {
+
+          notesData?.map( (item) => {
+            return <NoteCard 
+            key={item._id}
+            title={item.title}
+            date={item.createdOn} 
+            content={item.content} 
+            isPinned={item.isPinned}
+            onEdit={()=> handleEdit(item)}
+            onDelete={()=>handleDelete(item)}
+            onPin={()=>handlePin(item)}
           />
-          <NoteCard 
-            title="Meeting abc" 
-            date="12/12/1212" 
-            content="Important meeting" 
-            onEdit={()=>{}}
-            onDelete={()=>{}}
-          />
-          <NoteCard 
-            title="Meeting abc" 
-            date="12/12/1212" 
-            content="Important meeting" 
-            onEdit={()=>{}}
-            onDelete={()=>{}}
-          />
-          <NoteCard 
-            title="Meeting abc" 
-            date="12/12/1212" 
-            content="Important meeting" 
-            onEdit={()=>{}}
-            onDelete={()=>{}}
-          />
-          <NoteCard 
-            title="Meeting abc" 
-            date="12/12/1212" 
-            content="Important meeting" 
-            onEdit={()=>{}}
-            onDelete={()=>{}}
-          />
-          <NoteCard 
-            title="Meeting abc" 
-            date="12/12/1212" 
-            content="Important meeting" 
-            onEdit={()=>{}}
-            onDelete={()=>{}}
-          />
-          <NoteCard 
-            title="Meeting abc" 
-            date="12/12/1212" 
-            content="Important meeting" 
-            onEdit={()=>{}}
-            onDelete={()=>{}}
-          />
+            }
+          )
+        }
+          
+          
         </div>
       </div>
 
@@ -98,6 +148,8 @@ function Home() {
         className='w-[40%] max-h-3/4 bg-white rounded-md mx-auto mt-14 p-5 overflow-scroll'
         >
           <EditNotes 
+            type={openEditNote.type}
+            noteData = {openEditNote.data}
             handleClose={
               () => {
                 setOpenEditNote({
@@ -107,6 +159,7 @@ function Home() {
                 })
               }
             }
+            getAllNotes={getAllNotes}
           />
         </Modal>
     </div>

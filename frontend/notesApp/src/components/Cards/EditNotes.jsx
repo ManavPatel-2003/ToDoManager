@@ -1,9 +1,43 @@
 import React, { useState } from 'react'
 import { MdClose } from 'react-icons/md'
+import axiosInstance from '../../utils/axiosInstance'
 
-function EditNotes({handleClose}) {
+function EditNotes({type, noteData, handleClose, getAllNotes}) {
     const [title, setTitle] = useState()
     const [content, setContent] = useState()
+
+    const addNewNote = async() => {
+      try{
+        const response = await axiosInstance.post('add-note', {
+          title, 
+          content
+        }).then( () => {
+          getAllNotes()
+          handleClose()
+        })
+
+      }
+      catch(error){
+        console.log(error);
+      }
+    }
+
+    const editNotes = async() => {
+      try{
+        const response = await axiosInstance.put('edit-note/'+noteData._id, {
+          title, 
+          content
+        })
+
+        if(response.data && response.data.note){
+          getAllNotes()
+          handleClose()
+        }
+      }
+      catch(error){
+        console.log(error);
+      }
+    }
 
     return (
     <div className='relative'>
@@ -16,11 +50,11 @@ function EditNotes({handleClose}) {
       </div>
       <div className='flex flex-col gap-2 mt-4'>
         <label className='input-label'>Content</label>
-        <textarea type='text' onChange = { (e) => setTitle(e.target.value) } className='text-2xl bg-slate-100 p-2 rounded' rows={10} required/>
+        <textarea type='text' onChange = { (e) => setContent(e.target.value) } className='text-2xl bg-slate-100 p-2 rounded' rows={10} required/>
       </div>
       
-      <button className='w-[100%] bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium mt-5 p-3' onClick={ () => {}}>
-        ADD
+      <button className='w-[100%] bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium mt-5 p-3' onClick={type=="add"?addNewNote:editNotes}>
+        {type=="add"?"ADD":"UPDATE"}
       </button>
       
     </div>

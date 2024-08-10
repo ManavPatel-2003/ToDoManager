@@ -1,12 +1,14 @@
 import React from 'react'
-import {MdCreate, MdDelete} from 'react-icons/md';
+import {MdCreate, MdDelete, MdOutlinePushPin} from 'react-icons/md';
 
 function NoteCard({
     title, 
     date, 
     content,
+    isPinned,
     onEdit, 
-    onDelete
+    onDelete,
+    onPin
 }) {
   return (
     <div className='border rounded p-4 bg-white hover:shadow-xl transition-all ease-in-out'>
@@ -14,8 +16,9 @@ function NoteCard({
         <div>
             <h6 className='text-sm font-medium'>{title}</h6>
             <span className='text-xs'>{date}</span>
-        </div>
-
+        </div>  
+        <MdOutlinePushPin className={`icon-btn hover:cursor-pointer ${!isPinned?'text-blue-500':'text-slate-300'}`} onClick={onPin} />
+      </div>
         <p className='text-xs text-slate-600'>{content?.slice(0, 60)}</p>
 
         <div className='flex items-center justify-between mt-2'>
@@ -24,7 +27,7 @@ function NoteCard({
                 <MdDelete className='icon-btn hover:text-red-600' onClick={onDelete} />
             </div>
         </div>
-      </div>
+      
     </div>
   )
 }

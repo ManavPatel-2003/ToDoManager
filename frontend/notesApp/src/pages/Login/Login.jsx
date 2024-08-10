@@ -1,15 +1,39 @@
 import React, { useState } from 'react'
 import Navbar from '../../components/Navbar'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import axiosInstance from '../../utils/axiosInstance'
 
 function Login() {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [error, setError] = useState(null)
 
+    const navigate = useNavigate();
+    
     const handleLogin = async(e) => {
-        e.preventDefault();
-        // Login api call
+      e.preventDefault();
+      // Login api call
+      try{
+          const response = await axiosInstance.post('/login', {
+            email: email,
+            password: password
+          })
+          // Navigate
+          navigate('/dashboard')
+          // console.log(response.data)
+          if(response.data && response.data.accessToken){
+            localStorage.setItem("token", response.data.accessToken)
+          }
+        }
+        catch(error){
+          if(error.response && error.response.data){
+            setError(error.response.data.message)
+          }
+          else{
+            setError("Unexpected error occurred. Try Again!")
+          }
+        }
     }
 
   return (
@@ -17,11 +41,11 @@ function Login() {
       <Navbar />
       <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-          <img
+          {/* <img
             alt="Your Company"
             src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
             className="mx-auto h-10 w-auto"
-          />
+          /> */}
           <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
             Sign in
           </h2>
@@ -71,12 +95,11 @@ function Login() {
             </div>
 
             <div>
-              <button
+              <input
                 type="submit"
                 className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                Sign in
-              </button>
+                value="Sign In"
+              />
             </div>
           </form>
 
@@ -87,7 +110,9 @@ function Login() {
               Register Now
               </Link>
             </a>
+            
           </p>
+          {error}
         </div>
       </div>
     

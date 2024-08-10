@@ -8,12 +8,13 @@ console.log("Connected")
 const User = require("./models/user.model")
 const Note = require("./models/note.model")
 
-const express = require('express')
+const express = require('express') 
 const cors = require('cors')
 const app = express()
 
 const jwt = require('jsonwebtoken')
 const { authenticateToken } = require('./utilities')
+const bcrypt = require("bcryptjs")
 app.use(express.json())
 
 
@@ -45,6 +46,7 @@ app.post('/create-account', async(req, res) => {
         })
     }
 
+
     const user = new User({name, email, password})
     await user.save()
 
@@ -58,6 +60,7 @@ app.post('/create-account', async(req, res) => {
         accessToken,
         message: "Registration Successful"
     })
+
 })
 
 // login
@@ -70,7 +73,8 @@ app.post('/login', async(req, res) => {
         return res.status(400).json( {message: "User not found"} )
     }
 
-    if(userInfo.email == email && userInfo.password == password){
+    const isValid = await bcrypt.compare(password, userInfo.password)
+    if(isValid){
         const user = { user: userInfo }
         const accessToken = jwt.sign(user, `${process.env.ACCESS_TOKEN_SECRET}`, {
             expiresIn: "1hr",
@@ -87,6 +91,18 @@ app.post('/login', async(req, res) => {
         return res.status(400).json({
             error: true,
             message: "Invalid Credentials!"
+        })
+    }
+})
+
+app.post('/logout', async(req, res) => {
+    try{
+
+    }
+    catch(err){
+        return res.status(500).json({
+            error: true,
+            message: "Someting went wrong!"
         })
     }
 })
@@ -114,16 +130,16 @@ app.post('/get-user', authenticateToken, async(req, res) => {
 app.post('/add-note', authenticateToken, async(req, res) => {
     const { title, content } = req.body
     const { user } = req.user
+    const isPinned = false;
 
     try{
         const note = new Note({
             title, 
             content,
+            isPinned,
             userId: user._id
         })
-
         await note.save()
-
         return res.json({
             erorr: false,
             message: "Note added successfully!"
@@ -138,14 +154,14 @@ app.post('/add-note', authenticateToken, async(req, res) => {
 })
 
 // Edit Note
-app.post('/edit-note/:noteId', authenticateToken, async(req, res) => {
+app.put('/edit-note/:noteId', authenticateToken, async(req, res) => {
     const noteId = req.params.noteId
     const {title, content, isPinned} = req.body
     const {user} = req.user
 
     try{
         const note = await Note.findOne({_id: noteId, userId: user._id})
-        
+
         if(!note){
             return res.status(404).json(
                 {
@@ -180,7 +196,8 @@ app.post('/all-notes', authenticateToken, async(req, res) => {
     const { user } = req.user
 
     try{
-        const notes = await Note.find( { userId: user._id}).sort({isPinned:-1})
+        const notes = await Note.find( { userId: user._id}).sort({isPinned:1})
+        
 
         return res.json({
             error: false,
@@ -202,31 +219,26 @@ app.post('/delete-note/:noteId', authenticateToken, async(req, res) => {
     const { user } = req.user
 
     try{
-        const note = await Note.findOne( {_id: noteId, userId: user_id})
-
-        if(!note){
-            return res.status(404).json({
-                error: true,
-                message: "Note not found!"
-            })
-        }
-        await Note.deleteOne( {_id: noteId, userId: user._id})
-
-        return res.json({
-            error: true, 
-            message: "Note deleted successfully!"
-        })
+        const note = await Note.findOne( {_id: noteId, userId: user._id})
+        await Note.deleteOne( {_id: noteId, userId: user._id}).then(
+            () => {
+                return res.json({
+                    error: true, 
+                    message: "Note deleted successfully!"
+                })
+            }
+        )
     }
     catch(error){
         return res.status(500).json({
             error: true,
-            message: "Error deleting the note!"
+            message: "Errordeleting the note!"
         })
     }
 })
 
 // pin notes
-app.post('/update-pinned-note', authenticateToken, async(req, res) => {
+app.post('/update-pinned-note/:noteId', authenticateToken, async(req, res) => {
     const noteId = req.params.noteId
     const {isPinned} = req.body
     const {user} = req.user
@@ -243,7 +255,7 @@ app.post('/update-pinned-note', authenticateToken, async(req, res) => {
             )
         }
 
-        if(isPinned)   note.isPinned = isPinned
+        note.isPinned = !isPinned
 
         await note.save()
 
@@ -252,6 +264,8 @@ app.post('/update-pinned-note', authenticateToken, async(req, res) => {
             note,
             message: "Pinned Successfully!"
         })
+
+        
     }
     catch(error){
         res.status(500).json({

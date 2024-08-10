@@ -13,6 +13,7 @@ const noteSchema = new Schema({
     },
     isPinned: {
         type: Boolean, 
+        default:false,
         required: true
     },
     userId: {
